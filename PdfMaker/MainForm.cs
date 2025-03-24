@@ -1,4 +1,5 @@
 using System.Drawing.Imaging;
+using System.Reflection.Metadata;
 
 public class MainForm : Form
 {
@@ -29,6 +30,15 @@ public class MainForm : Form
         flowLayoutPanel.Controls.Add(startButton);
         toggleButtonList.Add(startButton);
 
+        var startSelectProcessButton = new Button()
+        {
+            Width = 150,
+        };
+        startSelectProcessButton.Text = "시작하기(앱선택)";
+        startSelectProcessButton.Click += StartSelectProcessButton_Click;
+        flowLayoutPanel.Controls.Add(startSelectProcessButton);
+        toggleButtonList.Add(startSelectProcessButton);
+
         var cancelButton = new Button();
         cancelButton.Text = "취소하기";
         cancelButton.Click += CancelButton_Click;
@@ -44,6 +54,12 @@ public class MainForm : Form
 
         this.Controls.Add(flowLayoutPanel);
     }
+    
+    private void CancelButton_Click(object? sender, EventArgs e)
+    {
+        cancellationTokenSource?.Cancel();
+    }
+
 
     private void ToggleButtonEnable()
     {
@@ -52,15 +68,46 @@ public class MainForm : Form
             button.Enabled = !button.Enabled;
         }
     }
-    
-    private void CancelButton_Click(object? sender, EventArgs e)
+
+    private async void StartSelectProcessButton_Click(object? sender, EventArgs e)
     {
-        cancellationTokenSource?.Cancel();
+        IntPtr handle;
+        int repeatCount;
+
+        using (var numberInput = new NumberInputDialog())
+        {
+            if (numberInput.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+            repeatCount = (int)numberInput.Result;
+        }
+        if (repeatCount == 0)
+        {
+            return;
+        }
+
+        using (var focusDialog = new FocusDialog())
+        {
+            if (focusDialog.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+            handle = focusDialog.SelectedWindow.Handle;
+        }
+
+        using (cancellationTokenSource = new CancellationTokenSource())
+        {
+            await this.Start(handle, repeatCount, cancellationTokenSource.Token);
+        }
     }
 
     private async void StartButton_Click(object sender, EventArgs e)
     {
         Rectangle selectRegion;
+        IntPtr handle;
+        int repeatCount;
+
         using (var regionSelector = new RegionSelector())
         {
             if (regionSelector.ShowDialog() != DialogResult.OK)
@@ -70,7 +117,6 @@ public class MainForm : Form
             selectRegion = regionSelector.SelectedRegion;
         }
 
-        int repeatCount;
         using (var numberInput = new NumberInputDialog())
         {
             if (numberInput.ShowDialog() != DialogResult.OK)
@@ -79,12 +125,10 @@ public class MainForm : Form
             }
             repeatCount = (int)numberInput.Result;
         }
-
         if (repeatCount == 0)
         {
             return;
         }
-
 
         using (var focusDialog = new FocusDialog())
         {
@@ -92,51 +136,59 @@ public class MainForm : Form
             {
                 return;
             }
-
-            NativeMethods.SetForegroundWindow(focusDialog.Handle);
+            handle = focusDialog.SelectedWindow.Handle;
         }
-
-        this.ToggleButtonEnable();
 
         using (cancellationTokenSource = new CancellationTokenSource())
         {
-            var token = cancellationTokenSource.Token;
-            await Task.Run(async () =>
-            {
-                var path = Path.Combine(Environment.CurrentDirectory, DateTime.Now.ToString("yyyyMMdd_HHmmSS"));
-                Directory.CreateDirectory(path);
-                ProgressBar.Maximum = repeatCount;
-                try
-                {
-                    for (var i = 0; i < repeatCount; i++)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        Capture(selectRegion, path, i);
-                        await Task.Delay(500, token);
-                        KeySender.SendRightArrow();
-                        await Task.Delay(500, token);
-                        ProgressBar.Value = i + 1;
-                    }
-                }
-                catch (OperationCanceledException) 
-                {
-                    return;
-                }
-                finally
-                {
-                    this.Invoke(this.ToggleButtonEnable);
-                }
-                return;
-
-                void Capture(Rectangle rectangle, string path, int index)
-                {
-                    using Bitmap bmp = new Bitmap(rectangle.Width, rectangle.Height);
-                    using Graphics g = Graphics.FromImage(bmp);
-                    g.CopyFromScreen(rectangle.Location, Point.Empty, rectangle.Size);
-                    bmp.Save($"{path}/capture{index:D4}.png", ImageFormat.Png);
-                }
-            }, token);
+            await this.Start(handle, selectRegion, repeatCount, cancellationTokenSource.Token);
         }
+    }
+
+    public Task Start(IntPtr handle, int repeatCount, CancellationToken token)
+    {
+        return this.Start(handle, NativeMethods.GetWindowRectangle(handle), repeatCount, token);
+    }
+
+    public Task Start(IntPtr handle, Rectangle selectRegion, int repeatCount, CancellationToken token)
+    {
+        NativeMethods.SetForegroundWindow(handle);
+        this.ToggleButtonEnable();
+        return Task.Run(async () =>
+        {
+            var path = Path.Combine(Environment.CurrentDirectory, DateTime.Now.ToString("yyyyMMdd_HHmmSS"));
+            Directory.CreateDirectory(path);
+            ProgressBar.Maximum = repeatCount;
+            try
+            {
+                for (var i = 0; i < repeatCount; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    Capture(selectRegion, path, i);
+                    await Task.Delay(500, token);
+                    KeySender.SendRightArrow();
+                    await Task.Delay(500, token);
+                    ProgressBar.Value = i + 1;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            finally
+            {
+                this.Invoke(this.ToggleButtonEnable);
+            }
+            return;
+
+            void Capture(Rectangle rectangle, string path, int index)
+            {
+                using Bitmap bmp = new Bitmap(rectangle.Width, rectangle.Height);
+                using Graphics g = Graphics.FromImage(bmp);
+                g.CopyFromScreen(rectangle.Location, Point.Empty, rectangle.Size);
+                bmp.Save($"{path}/capture{index:D4}.png", ImageFormat.Png);
+            }
+        }, token);
     }
 
     [STAThread]
