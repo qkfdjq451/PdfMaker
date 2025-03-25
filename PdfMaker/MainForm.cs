@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Reflection.Metadata;
 
@@ -161,10 +162,11 @@ public class MainForm : Form
             ProgressBar.Maximum = repeatCount;
             try
             {
+                var rect = selectRegion with { Width = selectRegion.Width - 440, X = selectRegion.X + 220 };
                 for (var i = 0; i < repeatCount; i++)
                 {
                     token.ThrowIfCancellationRequested();
-                    Capture(selectRegion, path, i);
+                    Capture(rect, path, i);
                     await Task.Delay(500, token);
                     KeySender.SendRightArrow();
                     await Task.Delay(500, token);
@@ -179,6 +181,8 @@ public class MainForm : Form
             {
                 this.Invoke(this.ToggleButtonEnable);
             }
+
+            Process.Start("explorer.exe", path);
             return;
 
             void Capture(Rectangle rectangle, string path, int index)
@@ -186,6 +190,8 @@ public class MainForm : Form
                 using Bitmap bmp = new Bitmap(rectangle.Width, rectangle.Height);
                 using Graphics g = Graphics.FromImage(bmp);
                 g.CopyFromScreen(rectangle.Location, Point.Empty, rectangle.Size);
+
+                bmp.RotateFlip(RotateFlipType.Rotate90FlipNone);
                 bmp.Save($"{path}/capture{index:D4}.png", ImageFormat.Png);
             }
         }, token);
