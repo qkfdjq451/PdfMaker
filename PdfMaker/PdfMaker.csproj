@@ -12,6 +12,11 @@
   <ItemGroup>
     <PackageReference Include="PdfSharp" Version="6.1.1" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+	  <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)Scripts\PreBuildScripts\Update Tessdata.ps1&quot; -ProjectDir &quot;$(ProjectDir.TrimEnd('\'))&quot;" />
+  </Target>
 
 </Project>
