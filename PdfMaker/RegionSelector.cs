@@ -1,13 +1,9 @@
-﻿using System;
-using System.Drawing;
-using System.Drawing.Imaging;
+﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using static System.ComponentModel.Design.ObjectSelectorEditor;
 
 public class RegionSelector : Form
 {
-
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
     public Rectangle SelectedRegion { get; private set; }
     // 이전 영역 정보를 받아서 초기화
     public RegionSelector()

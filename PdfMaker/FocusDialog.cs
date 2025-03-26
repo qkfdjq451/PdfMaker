@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Text;
 
 public class FocusDialog : Form
@@ -8,7 +9,7 @@ public class FocusDialog : Form
     private Button buttonCancel;
     private Button buttonRefresh;
 
-    // 사용자가 선택한 창 정보를 저장하는 프로퍼티
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
     public WindowInfo SelectedWindow { get; private set; }
 
     public FocusDialog()

@@ -1,9 +1,11 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Windows.Forms;
 
 public sealed class NumberInputDialog : Form
 {
-    public decimal Result { get; private set; }
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+    public int SelectNumber { get; private set; }
 
     FlowLayoutPanel flowLayoutPanel;
     NumericUpDown numericUpDown;
@@ -57,7 +59,7 @@ public sealed class NumberInputDialog : Form
         if (e.KeyCode == Keys.Enter)
         {
             this.DialogResult = DialogResult.OK;
-            this.Result = numericUpDown.Value;
+            this.SelectNumber = (int)numericUpDown.Value;
             this.Close();
         }
         else if (e.KeyCode == Keys.Escape)

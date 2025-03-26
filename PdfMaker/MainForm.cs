@@ -81,7 +81,7 @@ public class MainForm : Form
             {
                 return;
             }
-            repeatCount = (int)numberInput.Result;
+            repeatCount = numberInput.SelectNumber;
         }
         if (repeatCount == 0)
         {
@@ -124,7 +124,7 @@ public class MainForm : Form
             {
                 return;
             }
-            repeatCount = (int)numberInput.Result;
+            repeatCount = (int)numberInput.SelectNumber;
         }
         if (repeatCount == 0)
         {
